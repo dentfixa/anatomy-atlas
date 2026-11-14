@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>3D 인체 해부학 아틀라스 (오픈데이터)</title>
+<link rel="stylesheet" href="style.css">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22%3E%3Ctext y=%22.9em%22 font-size=%2290%22%3E🦴%3C/text%3E%3C/svg%3E">
+<script type="importmap">
+{ "imports": { "three": "./vendor/three/three.module.min.js", "three/addons/": "./vendor/three/addons/" } }
+</script>
+</head>
+<body>
+<div id="viewer"></div>
+
+<header id="topbar">
+  <button id="btnPanel" class="icon" title="레이어 패널">☰</button>
+  <div class="brand">해부학 아틀라스 <small>3D Human Anatomy</small></div>
+  <div class="search">
+    <input id="search" type="search" placeholder="구조물 검색 (예: mandible, masseter, 하악)" autocomplete="off">
+    <div id="results" hidden></div>
+  </div>
+  <div class="tools">
+    <button id="btnUndo" title="되돌리기">↶ <span>되돌리기</span></button>
+    <button id="btnReset" title="초기화">⟲ <span>초기화</span></button>
+    <button id="btnClip" title="단면">✂ <span>단면</span></button>
+    <button id="btnInfo" title="정보·라이선스">ⓘ</button>
+  </div>
+</header>
+
+<aside id="panel">
+  <h3>레이어 <small>Systems</small></h3>
+  <div id="layers"></div>
+  <div class="hint">눈 아이콘: 보이기/숨기기 · 슬라이더: 투명도(페이드) · ◎: 이 레이어만 보기(Isolate)</div>
+</aside>
+
+<div id="views">
+  <button data-view="front">앞</button><button data-view="back">뒤</button>
+  <button data-view="left">좌</button><button data-view="right">우</button>
+  <button data-view="top">위</button><button data-view="head">머리</button>
+</div>
+
+<div id="clipPanel" hidden>
+  <h4>단면 (Section)</h4>
+  <div class="cliprow" data-axis="x"><label><input type="checkbox"> 시상면 <small>Sagittal</small></label><input type="range" min="0" max="1000" value="500"><button class="flip" title="방향 뒤집기">⇄</button></div>
+  <div class="cliprow" data-axis="z"><label><input type="checkbox"> 관상면 <small>Coronal</small></label><input type="range" min="0" max="1000" value="500"><button class="flip" title="방향 뒤집기">⇄</button></div>
+  <div class="cliprow" data-axis="y"><label><input type="checkbox"> 횡단면 <small>Axial</small></label><input type="range" min="0" max="1000" value="800"><button class="flip" title="방향 뒤집기">⇄</button></div>
+  <label class="small"><input type="checkbox" id="clipHelpers" checked> 단면 위치 표시</label>
+</div>
+
+<div id="callout" hidden><span></span></div>
+
+<section id="card" hidden>
+  <div class="card-head">
+    <div>
+      <div id="cName" class="cname"></div>
+      <div id="cLatin" class="clatin"></div>
+      <div id="cKo" class="cko"></div>
+      <div id="cMeta" class="cmeta"></div>
+    </div>
+    <button id="cClose" class="icon" title="닫기">✕</button>
+  </div>
+  <div id="cDef" class="cdef"></div>
+  <div class="card-actions">
+    <button id="aHide">숨기기</button>
+    <button id="aFade">흐리게</button>
+    <button id="aIsolate">이것만 보기</button>
+    <button id="aFocus">확대</button>
+  </div>
+</section>
+
+<div id="loading"><div class="spin"></div><span id="loadText">모델 불러오는 중…</span></div>
+
+<dialog id="infoDlg">
+  <h3>정보 · 데이터 출처 · 라이선스</h3>
+  <p>Visible Body의 <i>Human Anatomy Atlas</i> 앱 사용 방식을 참고해 만든 <b>오픈데이터 기반 웹 3D 해부학 뷰어</b>입니다. Visible Body와 관련 없는 비공식 프로젝트이며, 교육·참고용입니다.</p>
+  <h4>조작법</h4>
+  <ul>
+    <li>드래그: 회전 · 휠/핀치: 확대 · 우클릭 드래그/두 손가락 드래그: 이동</li>
+    <li>구조물 클릭(탭): 선택 → 이름 표시, 숨기기/흐리게/이것만 보기</li>
+    <li>✂ 단면: 시상면·관상면·횡단면으로 잘라 보기</li>
+  </ul>
+  <h4>3D 데이터</h4>
+  <ul>
+    <li><b>Z-Anatomy</b> – The open source atlas of anatomy – <a href="https://creativecommons.org/licenses/by-sa/4.0/" target="_blank">CC BY-SA 4.0</a> (<a href="https://www.z-anatomy.com/" target="_blank">z-anatomy.com</a>, <a href="https://github.com/LluisV/Z-Anatomy-Sample" target="_blank">LluisV/Z-Anatomy-Sample</a> FBX 사용)</li>
+    <li><b>BodyParts3D</b> – The Database Center for Life Science – CC BY-SA 2.1 Japan (현재 배포처 표기: CC BY 4.0) – <a href="https://dbarchive.biosciencedbc.jp/en/bodyparts3d/" target="_blank">dbarchive.biosciencedbc.jp</a>. Z-Anatomy 모델의 기반 데이터입니다.</li>
+    <li>Z-Anatomy 원본에 포함된 추가 모델: "Brainder", "White matter" (University of Washington), "Cranial Nerves and Foramina" (University of Dundee, CAHID, CC BY 4.0). 비상업(NC) 라이선스로 표기된 내이(cochlea, vestibule)·신장 세부 모델로 추정되는 객체(Renal pelvis, Intrarenal arteries/veins)는 제외했습니다.</li>
+    <li>라틴어 명칭: Z-Anatomy Blender 파일의 번역 표(CC BY-SA 4.0). 설명문: Wikipedia (CC BY-SA 3.0 / GFDL). 둘 다 <a href="https://github.com/nqwrc/3d-anatomy" target="_blank">nqwrc/3d-anatomy</a>가 추출한 JSON을 사용했습니다.</li>
+    <li>한글 명칭: 일부 구조물만 수동으로 붙인 참고용 표기입니다(데이터셋 원본 아님).</li>
+  </ul>
+  <p>이 사이트의 변환된 3D 모델(GLB)은 원본과 같은 <b>CC BY-SA 4.0</b>으로 배포됩니다. 코드는 MIT. three.js (MIT), Draco decoder (Apache-2.0).</p>
+  <p>변환: Blender로 FBX → 시스템별 GLB (삼각형 감소 + Draco 압축). 단순화 과정에서 일부 형태가 거칠어질 수 있습니다.</p>
+  <form method="dialog"><button>닫기</button></form>
+</dialog>
+
+<script type="module" src="app.js"></script>
+</body>
+</html>
